@@ -18,7 +18,7 @@
             height: 100%; 
             padding: 0; 
             margin: 0; 
-            background: #f0f0f0; /* Damit wir sehen, dass die Seite lädt */
+            background: #ffffff; 
         }
     </style>
 </head>
@@ -27,64 +27,67 @@
     <div id="map"></div>
 
     <script>
-        // 1. Karte initialisieren
+        // 1. Karte auf Tirol zentrieren
         var map = L.map('map').setView([47.26, 11.39], 8);
 
-        // 2. Set Background
-        L.tileLayer('https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap © CartoDB'
+        // 2. Hintergrund-Karte (Stabile Version für Firefox & Mobile)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // 3. set railways
+        // 3. Gelbe Bahnlinien Österreich
         if (typeof json_OEBB_NETWORK_EDGES_2 !== 'undefined') {
             L.geoJson(json_OEBB_NETWORK_EDGES_2, {
                 style: { color: '#f0ff2d', weight: 2, opacity: 1 }
             }).addTo(map);
         }
 
-        // 4. set railways De
+        // 4. Gelbe Bahnlinien Deutschland
         if (typeof json_strecken_polyline_3 !== 'undefined') {
             L.geoJson(json_strecken_polyline_3, {
                 style: { color: '#f0ff2d', weight: 2, opacity: 1 }
             }).addTo(map);
         }
 
-        // 5. Camps aus CSV laden 
-const googleSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgubvpjQe4h8QkLTlO3KojadPfkRtW7LbmIVEOwPso4Pvp6dF_fCSF0XRHnTQso9FcC_0xHtWg-Vx3/pub?output=csv';
-fetch(googleSheetUrl)
-    .then(res => res.text())
-    .then(csvText => {
-        Papa.parse(csvText, {
-            header: true,
-            skipEmptyLines: true,
-            complete: function(results) {
-                results.data.forEach(function(row) {
-                    // correct spaces 
-                    let lat = parseFloat(row.lat || row.Lat);
-                    let lon = parseFloat(row.lon || row.Lon);
-                    let name = row.name || "Camp";
-                    let type = (row.typ || "default").trim().toLowerCase();
+        // 5. Camps aus Google Sheets laden
+        const googleSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgubvpjQe4h8QkLTlO3KojadPfkRtW7LbmIVEOwPso4Pvp6dF_fCSF0XRHnTQso9FcC_0xHtWg-Vx3/pub?output=csv';
 
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        // markers
-                        let iconPath = 'markers/' + type + '.svg';
+        fetch(googleSheetUrl)
+            .then(res => res.text())
+            .then(csvText => {
+                Papa.parse(csvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        results.data.forEach(function(row) {
+                            // Koordinaten auslesen und in Zahlen umwandeln
+                            let lat = parseFloat(row.lat || row.Lat);
+                            let lon = parseFloat(row.lon || row.Lon);
+                            let name = row.name || "Camp";
+                            let type = (row.typ || "default").trim().toLowerCase();
 
-                        const customIcon = L.icon({
-                            iconUrl: iconPath,
-                            iconSize: [32, 32],
-                            iconAnchor: [16, 32],
-                            popupAnchor: [0, -32],
-                            // default
-                            className: 'map-marker'
+                            if (!isNaN(lat) && !isNaN(lon)) {
+                                // Pfad zum Marker-Icon
+                                let iconPath = 'markers/' + type + '.svg';
+
+                                const customIcon = L.icon({
+                                    iconUrl: iconPath,
+                                    iconSize: [32, 32],
+                                    iconAnchor: [16, 32],
+                                    popupAnchor: [0, -32],
+                                    className: 'map-marker'
+                                });
+
+                                L.marker([lat, lon], {icon: customIcon})
+                                    .addTo(map)
+                                    .bindPopup("<b>" + name + "</b><br>Typ: " + type.toUpperCase());
+                            }
                         });
-
-                        L.marker([lat, lon], {icon: customIcon})
-                            .addTo(map)
-                            .bindPopup("<b>" + name + "</b><br>Typ: " + type);
                     }
                 });
-            }
-        });
-    });
+            })
+            .catch(err => console.error("Fehler beim Laden von Google Sheets:", err));
+
+    </script>
 </body>
 </html>

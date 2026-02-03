@@ -50,7 +50,6 @@
         }
 
         // 5. Camps aus der CSV laden (für deine Kollegen)
-        // Dein Google Sheets Link
 const googleSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgubvpjQe4h8QkLTlO3KojadPfkRtW7LbmIVEOwPso4Pvp6dF_fCSF0XRHnTQso9FcC_0xHtWg-Vx3/pub?gid=0&single=true&output=csv';
 
 fetch(googleSheetUrl)
@@ -61,35 +60,32 @@ fetch(googleSheetUrl)
             skipEmptyLines: true,
             complete: function(results) {
                 results.data.forEach(function(row) {
-                    // Wir brauchen mindestens Name, Breitengrad (lat) und Längengrad (lon)
-                    if(row.name && row.lat && row.lon) {
-                        
-                        // Typ auslesen und Leerzeichen entfernen (z.B. " Bike " -> "Bike")
-                        let typeClean = row.typ ? row.typ.trim() : 'default';
+                    // Falls die Spaltenüberschriften im Sheet Leerzeichen haben
+                    let lat = parseFloat(row.lat || row.Lat);
+                    let lon = parseFloat(row.lon || row.Lon);
+                    let name = row.name || "Camp";
+                    let type = (row.typ || "default").trim().toLowerCase();
 
-                        // Icon-Zuordnung (Die Dateien müssen bike.svg, climb.svg, snow.svg heißen)
-                        let iconPath = 'markers/default.svg';
-                        if(typeClean === 'Bike')  iconPath = 'markers/bike.svg';
-                        if(typeClean === 'Climb') iconPath = 'markers/climb.svg';
-                        if(typeClean === 'Snow')  iconPath = 'markers/snow.svg';
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        // Der Code sucht jetzt nach markers/bike.svg, markers/climb.svg, etc.
+                        let iconPath = 'markers/' + type + '.svg';
 
                         const customIcon = L.icon({
                             iconUrl: iconPath,
-                            iconSize: [32, 32],      // Größe der Icons auf der Karte
-                            iconAnchor: [16, 32],    // Punkt des Icons, der auf der Koordinate liegt
-                            popupAnchor: [0, -32]    // Wo das Infofenster aufpoppt
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 32],
+                            popupAnchor: [0, -32],
+                            // Falls ein Bild fehlt, zeigt er keine Fehlermeldung
+                            className: 'map-marker'
                         });
 
-                        // Marker zur Karte hinzufügen
-                        L.marker([parseFloat(row.lat), parseFloat(row.lon)], {icon: customIcon})
-                         .addTo(map)
-                         .bindPopup('<b>' + row.name + '</b><br>Kategorie: ' + typeClean);
+                        L.marker([lat, lon], {icon: customIcon})
+                            .addTo(map)
+                            .bindPopup("<b>" + name + "</b><br>Typ: " + type);
                     }
                 });
             }
         });
-    })
-    .catch(err => console.error("Fehler beim Laden vom Google Sheet:", err));
-    </script>
+    });
 </body>
 </html>

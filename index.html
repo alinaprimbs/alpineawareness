@@ -30,26 +30,26 @@
         // 1. Karte initialisieren
         var map = L.map('map').setView([47.26, 11.39], 8);
 
-        // 2. Graues Hintergrund-Design
+        // 2. Set Background
         L.tileLayer('https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap © CartoDB'
         }).addTo(map);
 
-        // 3. Gelbe Bahnlinien (OEBB)
+        // 3. set railways
         if (typeof json_OEBB_NETWORK_EDGES_2 !== 'undefined') {
             L.geoJson(json_OEBB_NETWORK_EDGES_2, {
                 style: { color: '#f0ff2d', weight: 2, opacity: 1 }
             }).addTo(map);
         }
 
-        // 4. Gelbe Bahnlinien (Deutschland/Strecken)
+        // 4. set railways De
         if (typeof json_strecken_polyline_3 !== 'undefined') {
             L.geoJson(json_strecken_polyline_3, {
                 style: { color: '#f0ff2d', weight: 2, opacity: 1 }
             }).addTo(map);
         }
 
-        // 5. Camps aus der CSV laden (für deine Kollegen)
+        // 5. Camps aus CSV laden 
 const googleSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgubvpjQe4h8QkLTlO3KojadPfkRtW7LbmIVEOwPso4Pvp6dF_fCSF0XRHnTQso9FcC_0xHtWg-Vx3/pub?gid=0&single=true&output=csv';
 
 fetch(googleSheetUrl)
@@ -60,14 +60,14 @@ fetch(googleSheetUrl)
             skipEmptyLines: true,
             complete: function(results) {
                 results.data.forEach(function(row) {
-                    // Falls die Spaltenüberschriften im Sheet Leerzeichen haben
+                    // correct spaces 
                     let lat = parseFloat(row.lat || row.Lat);
                     let lon = parseFloat(row.lon || row.Lon);
                     let name = row.name || "Camp";
                     let type = (row.typ || "default").trim().toLowerCase();
 
                     if (!isNaN(lat) && !isNaN(lon)) {
-                        // Der Code sucht jetzt nach markers/bike.svg, markers/climb.svg, etc.
+                        // markers
                         let iconPath = 'markers/' + type + '.svg';
 
                         const customIcon = L.icon({
@@ -75,7 +75,7 @@ fetch(googleSheetUrl)
                             iconSize: [32, 32],
                             iconAnchor: [16, 32],
                             popupAnchor: [0, -32],
-                            // Falls ein Bild fehlt, zeigt er keine Fehlermeldung
+                            // default
                             className: 'map-marker'
                         });
 

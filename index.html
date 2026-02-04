@@ -18,7 +18,7 @@
             height: 100%; 
             padding: 0; 
             margin: 0; 
-            background: #ffffff; 
+            background: #f0f0f0; 
         }
     </style>
 </head>
@@ -27,31 +27,26 @@
     <div id="map"></div>
 
     <script>
-        // 1. Karte auf Tirol zentrieren
         var map = L.map('map').setView([47.26, 11.39], 8);
 
-        // 2. Hintergrund-Karte (Stabile Version für Firefox & Mobile)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap © CartoDB',
             subdomains: 'abcd',
             maxZoom: 20
         }).addTo(map);
 
-        // 3. Gelbe Bahnlinien Österreich
         if (typeof json_OEBB_NETWORK_EDGES_2 !== 'undefined') {
             L.geoJson(json_OEBB_NETWORK_EDGES_2, {
                 style: { color: '#f0ff2d', weight: 2, opacity: 1 }
             }).addTo(map);
         }
 
-        // 4. Gelbe Bahnlinien Deutschland
         if (typeof json_strecken_polyline_3 !== 'undefined') {
             L.geoJson(json_strecken_polyline_3, {
                 style: { color: '#f0ff2d', weight: 2, opacity: 1 }
             }).addTo(map);
         }
 
-        // 5. Camps aus Google Sheets laden
         const googleSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgubvpjQe4h8QkLTlO3KojadPfkRtW7LbmIVEOwPso4Pvp6dF_fCSF0XRHnTQso9FcC_0xHtWg-Vx3/pub?output=csv';
 
         fetch(googleSheetUrl)
@@ -62,34 +57,44 @@
                     skipEmptyLines: true,
                     complete: function(results) {
                         results.data.forEach(function(row) {
-                            // Koordinaten auslesen und in Zahlen umwandeln
                             let lat = parseFloat(row.lat || row.Lat);
                             let lon = parseFloat(row.lon || row.Lon);
                             let name = row.name || "Camp";
-                            let type = (row.typ || "default").trim().toLowerCase();
+                            let typeRaw = (row.typ || "default").trim();
+                            let type = typeRaw.toLowerCase();
+                            let date = row.datum || row.Datum || "tba";
+                            let info = row['Info für dich'] || ""; // Liest deine Info-Spalte aus
 
                             if (!isNaN(lat) && !isNaN(lon)) {
-                                // Pfad zum Marker-Icon
-                                let iconPath = 'markers/' + type + '.svg';
+                                // Ersetzt Leerzeichen im Dateinamen 
+                                let iconFileName = type.replace(/\s+/g, '') + '.svg';
+                                let iconPath = 'markers/' + iconFileName;
 
                                 const customIcon = L.icon({
                                     iconUrl: iconPath,
                                     iconSize: [32, 32],
                                     iconAnchor: [16, 32],
-                                    popupAnchor: [0, -32],
-                                    className: 'map-marker'
+                                    popupAnchor: [0, -32]
                                 });
+
+                                let popupContent = `
+                                    <div style="font-family: sans-serif;">
+                                        <b style="font-size: 14px;">${name}</b><br>
+                                        <span style="color: #666;">${date}</span><br>
+                                        <hr style="border: 0; border-top: 1px solid #eee; margin: 5px 0;">
+                                        <b>Kategorie:</b> ${typeRaw}<br>
+                                        ${info ? `<i>${info}</i>` : ""}
+                                    </div>
+                                `;
 
                                 L.marker([lat, lon], {icon: customIcon})
                                     .addTo(map)
-                                    .bindPopup("<b>" + name + "</b><br>Typ: " + type.toUpperCase());
+                                    .bindPopup(popupContent);
                             }
                         });
                     }
                 });
-            })
-            .catch(err => console.error("Fehler beim Laden von Google Sheets:", err));
-
+            });
     </script>
 </body>
 </html>

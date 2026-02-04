@@ -13,40 +13,64 @@
     <script src="data/strecken_polyline_3.js"></script>
 
     <style>
-        html, body, #map { 
-            width: 100%; 
-            height: 100%; 
-            padding: 0; 
-            margin: 0; 
-            background: #f0f0f0; 
+        html, body, #map { width: 100%; height: 100%; padding: 0; margin: 0; background: #f0f0f0; }
+        
+        /* Design der Legende */
+        .legend {
+            background: white;
+            padding: 10px;
+            line-height: 1.5;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            font-family: sans-serif;
+            font-size: 13px;
+            color: #333;
         }
+        .legend h4 { margin: 0 0 8px; font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 3px; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
+        .legend-icon { width: 20px; height: 20px; margin-right: 8px; }
+
+        /* Popup Styling */
+        .popup-title { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 5px; display: block; }
+        .popup-date { color: #e67e22; font-weight: bold; font-size: 12px; }
+        .popup-info { font-style: italic; color: #555; margin-top: 5px; display: block; border-top: 1px solid #ddd; padding-top: 5px; }
     </style>
 </head>
 <body>
-
     <div id="map"></div>
 
     <script>
-        var map = L.map('map').setView([47.26, 11.39], 8);
+        var map = L.map('map').setView([47.26, 11.39], 7);
 
+        // Graue Karte
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap © CartoDB',
             subdomains: 'abcd',
             maxZoom: 20
         }).addTo(map);
 
-        if (typeof json_OEBB_NETWORK_EDGES_2 !== 'undefined') {
-            L.geoJson(json_OEBB_NETWORK_EDGES_2, {
-                style: { color: '#f0ff2d', weight: 2, opacity: 1 }
-            }).addTo(map);
-        }
+        // Gelbe Bahnlinien
+        const lineStyle = { color: '#f0ff2d', weight: 2, opacity: 0.8 };
+        if (typeof json_OEBB_NETWORK_EDGES_2 !== 'undefined') L.geoJson(json_OEBB_NETWORK_EDGES_2, {style: lineStyle}).addTo(map);
+        if (typeof json_strecken_polyline_3 !== 'undefined') L.geoJson(json_strecken_polyline_3, {style: lineStyle}).addTo(map);
 
-        if (typeof json_strecken_polyline_3 !== 'undefined') {
-            L.geoJson(json_strecken_polyline_3, {
-                style: { color: '#f0ff2d', weight: 2, opacity: 1 }
-            }).addTo(map);
-        }
+        // --- NEU: Legende hinzufügen ---
+        var legend = L.control({position: 'topright'});
 
+        legend.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = '<h4>Kategorien</h4>' +
+                '<div class="legend-item"><img src="markers/snow.svg" class="legend-icon"> Snow Camp</div>' +
+                '<div class="legend-item"><img src="markers/family.svg" class="legend-icon"> Family Camp</div>' +
+                '<div class="legend-item"><img src="markers/womenpower.svg" class="legend-icon"> Women Power</div>' +
+                '<div class="legend-item"><img src="markers/bike.svg" class="legend-icon"> Bike Camp</div>' +
+                '<div class="legend-item"><img src="markers/climb.svg" class="legend-icon"> Climb Camp</div>' +
+                '<div class="legend-item" style="margin-top:8px;"><span style="display:inline-block; width:20px; height:3px; background:#f0ff2d; margin-right:8px;"></span> Bahnnetz</div>';
+            return div;
+        };
+        legend.addTo(map);
+
+        // --- Google Sheets Daten laden ---
         const googleSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgubvpjQe4h8QkLTlO3KojadPfkRtW7LbmIVEOwPso4Pvp6dF_fCSF0XRHnTQso9FcC_0xHtWg-Vx3/pub?output=csv';
 
         fetch(googleSheetUrl)
@@ -57,18 +81,13 @@
                     skipEmptyLines: true,
                     complete: function(results) {
                         results.data.forEach(function(row) {
-                            let lat = parseFloat(row.lat || row.Lat);
-                            let lon = parseFloat(row.lon || row.Lon);
-                            let name = row.name || "Camp";
-                            let typeRaw = (row.typ || "default").trim();
-                            let type = typeRaw.toLowerCase();
-                            let date = row.datum || row.Datum || "tba";
-                            let info = row['Info für dich'] || ""; // Liest deine Info-Spalte aus
-
+                            let lat = parseFloat(row.lat);
+                            let lon = parseFloat(row.lon);
+                            
                             if (!isNaN(lat) && !isNaN(lon)) {
-                                // Ersetzt Leerzeichen im Dateinamen 
-                                let iconFileName = type.replace(/\s+/g, '') + '.svg';
-                                let iconPath = 'markers/' + iconFileName;
+                                let typeRaw = (row.typ || "default").trim();
+                                let type = typeRaw.toLowerCase().replace(/\s+/g, '');
+                                let iconPath = 'markers/' + type + '.svg';
 
                                 const customIcon = L.icon({
                                     iconUrl: iconPath,
@@ -77,19 +96,16 @@
                                     popupAnchor: [0, -32]
                                 });
 
-                                let popupContent = `
-                                    <div style="font-family: sans-serif;">
-                                        <b style="font-size: 14px;">${name}</b><br>
-                                        <span style="color: #666;">${date}</span><br>
-                                        <hr style="border: 0; border-top: 1px solid #eee; margin: 5px 0;">
-                                        <b>Kategorie:</b> ${typeRaw}<br>
-                                        ${info ? `<i>${info}</i>` : ""}
-                                    </div>
+                                let popupInhalt = `
+                                    <span class="popup-title">${row.name}</span>
+                                    <span class="popup-date">${row.datum || ''}</span><br>
+                                    <small>Kategorie: ${typeRaw}</small>
+                                    ${row['Info für dich'] ? `<span class="popup-info">${row['Info für dich']}</span>` : ''}
                                 `;
 
                                 L.marker([lat, lon], {icon: customIcon})
                                     .addTo(map)
-                                    .bindPopup(popupContent);
+                                    .bindPopup(popupInhalt);
                             }
                         });
                     }

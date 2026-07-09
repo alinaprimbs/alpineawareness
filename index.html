@@ -101,6 +101,7 @@
                                     <span class="popup-date">${row.datum || ''}</span><br>
                                     <small>Kategorie: ${typeRaw}</small>
                                     ${row['Info für dich'] ? `<span class="popup-info">${row['Info für dich']}</span>` : ''}
+                                    ${row.Link ? `<br><a href="${row.Link}" target="_blank">Mehr Infos</a>` : ''}
                                 `;
 
                                 L.marker([lat, lon], {icon: customIcon})
